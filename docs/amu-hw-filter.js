@@ -93,6 +93,13 @@ class AmuHwFilter {
                                .find(b => b) || null;
             out.push({ badge, nodes });
         }
+        // Register-map style rows: a field row carrying a hardware badge but no
+        // command title is a block of its own
+        for (const badge of document.querySelectorAll("table.fieldtable .hwbadge")) {
+            const row = badge.closest("tr");
+            if (!row || row.querySelector(".amucmdtitle")) continue;
+            out.push({ badge, nodes: [row] });
+        }
         return out;
     }
 

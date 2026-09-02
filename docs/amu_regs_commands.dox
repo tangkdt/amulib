@@ -20,8 +20,8 @@
  * | 0x02 | MEASURE | Measurement in progress          |
  * | 0x04 | HEATER  | Heater active                    |
  * | 0x08 | MPPT    | Retired - host side now; the bit stays reserved because deployed masters still test it |
- * | 0x40 | WIFI    | WiFi active                      |
- * | 0x80 | BLE     | BLE radio advertising            |
+ * | 0x40 | WIFI    | WiFi active (AMU3 ESP32 only)    |
+ * | 0x80 | BLE     | BLE radio advertising (AMU3 ESP32 only) |
  *
  * @amupanels
  * @amuscpi{SYSTem:STATus?}
@@ -106,14 +106,14 @@
  *
  * | Bit | Channel        | Bit | Channel        |
  * |-----|----------------|-----|----------------|
- * | 0   | Voltage        | 8   | AVDD           |
- * | 1   | Current        | 9   | IOVDD          |
- * | 2   | TSensor 0      | 10  | ALDO           |
- * | 3   | TSensor 1      | 11  | DLDO           |
+ * | 0   | Voltage        | 8   | AVDD (legacy only) |
+ * | 1   | Current        | 9   | IOVDD (legacy only) |
+ * | 2   | TSensor 0      | 10  | ALDO (legacy only) |
+ * | 3   | TSensor 1      | 11  | DLDO (legacy only) |
  * | 4   | TSensor 2      | 12  | Sun sensor TL  |
- * | 5   | Bias           | 13  | Sun sensor BL  |
- * | 6   | Offset         | 14  | Sun sensor BR  |
- * | 7   | ADC temp       | 15  | Sun sensor TR  |
+ * | 5   | Bias (legacy only) | 13  | Sun sensor BL  |
+ * | 6   | Offset (legacy only) | 14  | Sun sensor BR  |
+ * | 7   | ADC temp (legacy only) | 15  | Sun sensor TR  |
  *
  * @c amu_ch_en_t also defines composite masks (@c AMU_CH_EN_TSENSORS,
  * @c AMU_CH_EN_SUNSENSOR, @c AMU_CH_EN_INTERNAL_VOLTAGES, @c AMU_CH_EN_ALL).
@@ -133,14 +133,14 @@
  * @endamupanel
  * @endamupanels
  *
- * @note The mask is host state: @c EXEC:MEASure:ACTive? returns one float per set
- *       bit, so a host that changes the mask without restoring it reads the wrong
- *       count - silently, as plausible numbers in the wrong slots.
+ * @note @c MEASure:ADC:ACTive? returns one float per set bit, packed in channel
+ *       order with no labels -> slot meaning depends on the current mask.
  *
  * @amutitle{ADC — Status}
  * @amudesc{Raw status register of the high-resolution ADC}
- * Register: @ref AMU_REG_SYSTEM_STATUS_HRADC, uint32 - the STATUS word of the
- * ADS131M08, bit meanings per the TI datasheet.
+ * Register: @ref AMU_REG_SYSTEM_STATUS_HRADC, uint32 - ADC ID in the lower 16
+ * bits, its STATUS word in the upper 16. Bit meanings depend on the ADC fitted:
+ * ADS131M08 on AMU3, AD7124 on legacy hardware.
  *
  * @amupanels
  * @amuscpi{ADC:STATus?}
@@ -719,6 +719,7 @@
  * @endamupanels
  *
  * @amutitle{Sweep Meta — CRC}
+ * @amuhw{Not implemented on AMU3}
  * @amudesc{Sweep data checksum - not computed on AMU3}
  * Register: @ref AMU_REG_SWEEP_META_CRC, uint32, reads 0. The field stays for
  * record-layout compatibility: older generations stored a CRC-32 (IEEE 802.3)

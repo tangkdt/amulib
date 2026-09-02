@@ -370,20 +370,21 @@ h2.groupheader {
 }
 
 /* Layout tuning for the doxygen-awesome sidebar-only theme:
-   - taller header region so the title + two-line PROJECT_BRIEF + search box
-     fit without the nav tree riding up into the search box;
+   - taller header region so the title + two-line PROJECT_BRIEF + hardware
+     selector + search box fit without the nav tree riding up into the search box;
    - wider content column so the side-by-side command panels aren't squished
      and don't waste so much space on a wide display. */
 html {
-    --top-height: 150px;
+    --top-height: 190px;
     --content-maxwidth: 1280px;
 }
 
 /* ---------- Hardware selector (amu-hw-filter.js) ---------- */
 
 #amu-hw-select {
-    margin-left: 12px;
-    padding: 2px 8px;
+    display: block;
+    margin: 10px 0 6px;
+    padding: 4px 10px;
     border-radius: var(--border-radius-small, 4px);
     border: 1px solid var(--separator-color, #ccc);
     background: var(--page-background-color, #fff);
