@@ -137,7 +137,7 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @warning All user configuration will be lost.
+	 *  @note Unsaved runtime settings are lost; configuration saved to non-volatile storage persists.
 	 *  @note Device will disconnect briefly during the reset process.
 	 */
 	CMD_SYSTEM_RESET =						CMD_SYSTEM_OFFSET + 0x01,
@@ -182,13 +182,13 @@ typedef enum {
 	 *  @endamupanel
 	 *  @endamupanels
 	 *  @warning Addresses 0x00-0x07 and 0x78-0x7F are reserved and will be rejected.
-	 *  @note Address changes take effect immediately but are not saved to EEPROM.
+	 *  @note Takes effect immediately. AMU3 persists the address in non-volatile storage; a rejected address leaves the current one in place.
 	 */
 	CMD_SYSTEM_TWI_ADDRESS =				CMD_SYSTEM_OFFSET + 0x03,
 	
 	/** @amutitle{System — TWI Device Count}
-	 *  @amudesc{Scans I2C bus and counts devices}
-	 *  @return Number of detected I2C devices (0-112)
+	 *  @amudesc{Returns number of devices found by the last I2C bus scan}
+	 *  @return Number of devices in the device table
 	 *
 	 *  @amupanels
 	 *  @amuscpi{SYSTem:TWI:NUMdevices?}
@@ -201,13 +201,13 @@ typedef enum {
 	 *  Not exposed by the public C++ API - issue via SCPI.
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Scan may take up to 2 seconds to complete.
+	 *  @note Does not scan -> reports the table built by the last scan (see SYSTem:TWI:SCAN?).
 	 */
 	CMD_SYSTEM_TWI_NUM_DEVICES =			CMD_SYSTEM_OFFSET + 0x04,
 	
 	/** @amutitle{System — TWI Status}
 	 *  @amudesc{Returns I2C interface status}
-	 *  @return Status bitfield: [7:4]=Reserved [3]=Bus_Error [2]=Arbitration_Lost [1]=NACK [0]=Active
+	 *  @return Status of last TWI transaction (amu_twi_status_t): 0=OK 1=Data_Too_Long 2=NACK_Addr 3=NACK_Data 4=Error 5=Timeout
 	 *
 	 *  @amupanels
 	 *  @amuscpi{SYSTem:TWI:STATus?}
@@ -220,7 +220,7 @@ typedef enum {
 	 *  Not exposed by the public C++ API - issue via SCPI.
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Bitfield: [7:4]=Reserved [3]=Bus_Error [2]=Arbitration_Lost [1]=NACK [0]=Active. Status bits are cleared after reading.
+	 *  @note Not cleared on read -> overwritten by the next transaction.
 	 */
 	CMD_SYSTEM_TWI_STATUS =					CMD_SYSTEM_OFFSET + 0x05,
 	
@@ -247,13 +247,13 @@ typedef enum {
 	
 	/** @amutitle{System — Serial}
 	 *  @amudesc{Returns unique device serial number}
-	 *  @return Serial number string (format: "AMU-YYYYMMDD-XXXX")
+	 *  @return Serial number string (format is device-dependent; AMU3 reports the MCU MAC, e.g. "0x84FCE6123ABC")
 	 *
 	 *  @amupanels
 	 *  @amuscpi{SYSTem:SERial?}
 	 *  @amupanelex
 	 *  SYSTem:SERial?
-	 *  AMU-20240115-0042
+	 *  0x84FCE6123ABC
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @amui2c{CMD_SYSTEM_SERIAL_NUM}
@@ -262,13 +262,12 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Serial numbers are globally unique across all devices.
 	 */
 	CMD_SYSTEM_SERIAL_NUM =					CMD_SYSTEM_OFFSET + 0x07,
 	
 	/** @amutitle{System — Temperature}
 	 *  @amudesc{Internal MCU temperature sensor}
-	 *  @return Temperature in degrees Celsius (range: -40 to +85°C)
+	 *  @return Temperature in degrees Celsius
 	 *
 	 *  @amupanels
 	 *  @amuscpi{SYSTem:TEMPerature?}
@@ -283,15 +282,13 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Sensor is factory calibrated at 25°C (accuracy ±3°C).
-	 *  @warning High temperatures may indicate thermal stress.
 	 */
 	CMD_SYSTEM_TEMPERATURE =				CMD_SYSTEM_OFFSET + 0x08,
 	
 	/** @amutitle{System — Timestamp}
 	 *  @amudesc{Sets or queries system timestamp}
-	 *  @param timestamp Seconds since boot (32-bit unsigned, rolls over at ~136 years)
-	 *  @return Current timestamp in seconds
+	 *  @param timestamp Milliseconds since boot (32-bit unsigned)
+	 *  @return Current timestamp in milliseconds
 	 *
 	 *  @amupanels
 	 *  @amuscpi{SYSTem:TIMEstamp[?]}
@@ -304,13 +301,13 @@ typedef enum {
 	 *  Not exposed by the public C++ API - issue via SCPI.
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Timestamp is reset to 0 on power cycle or reset; rolls over at ~136 years.
+	 *  @note Reset to 0 on power cycle or reset; uint32 milliseconds -> rolls over after ~49.7 days.
 	 */
 	CMD_SYSTEM_TIME =						CMD_SYSTEM_OFFSET + 0x09,
 	
 	/** @amutitle{System — Timestamp UTC}
 	 *  @amudesc{Sets or queries UTC timestamp}
-	 *  @param utc_time Unix epoch timestamp (32-bit, valid until 2038)
+	 *  @param utc_time Unix epoch timestamp (32-bit unsigned)
 	 *  @return Current UTC timestamp
 	 *
 	 *  @amupanels
@@ -324,7 +321,7 @@ typedef enum {
 	 *  Not exposed by the public C++ API - issue via SCPI.
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Unix epoch format (seconds since Jan 1, 1970); valid until 2038. Not maintained across power cycles without an external RTC.
+	 *  @note Unix epoch format (seconds since Jan 1, 1970); unsigned 32-bit -> good until 2106. Not maintained across power cycles without an external RTC.
 	 */
 	CMD_SYSTEM_UTC_TIME =					CMD_SYSTEM_OFFSET + 0x0A,
 	
@@ -349,7 +346,7 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Components are comma-separated floats; LED brightness is automatically adjusted for optimal visibility.
+	 *  @note Components are comma-separated floats, scaled linearly to the LED driver.
 	 */
 	CMD_SYSTEM_LED_COLOR =					CMD_SYSTEM_OFFSET + 0x0B,
 	
@@ -425,7 +422,7 @@ typedef enum {
 	CMD_SYSTEM_EXTENDED =					CMD_SYSTEM_OFFSET + 0x0E,
 
 	/** @amutitle{System — Sleep Mode}
-	 *  @amudesc{Puts the device into low-power sleep mode to conserve energy. Device will wake on USB activity\, I2C communication\, or external interrupt}
+	 *  @amudesc{Requests low-power sleep mode\, entered once the device is idle}
 	 *
 	 *  @amupanels
 	 *  @amuscpi{SYSTem:SLEEP}
@@ -439,8 +436,7 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Current measurements will be suspended during sleep.
-	 *  @warning USB communication may be interrupted briefly.
+	 *  @note Measurement system is disabled while asleep; communication wakes the device.
 	 */
 	CMD_SYSTEM_SLEEP =						CMD_SYSTEM_OFFSET + 0x0F,
 } CMD_SYSTEM_t;
@@ -683,7 +679,7 @@ typedef enum {
 typedef enum {
 	/** @amutitle{DUT — Junction}
 	 *  @amudesc{Sets or queries DUT junction type.}
-	 *  @param junction Junction type ID (0=Unknown, 1=Silicon, 2=GaAs, 3=InGaP, 4=Ge)
+	 *  @param junction Caller-defined identifier; the firmware stores it verbatim with no fixed enum
 	 *  @return Current junction type identifier
 	 *
 	 *  @amupanels
@@ -700,7 +696,7 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Junction type affects measurement range and calibration coefficients
+	 *  @note DUT metadata only; not read back by any calibration or measurement calculation
 	 */
 	CMD_DUT_JUNCTION =						CMD_DUT_OFFSET + 0x00,
 	
@@ -764,7 +760,7 @@ typedef enum {
 	
 	/** @amutitle{DUT — Manufacturer}
 	 *  @amudesc{Sets or queries DUT manufacturer name.}
-	 *  @param manufacturer Manufacturer name string (max 32 characters)
+	 *  @param manufacturer Manufacturer name string (max 15 characters)
 	 *  @return Current manufacturer name
 	 *
 	 *  @amupanels
@@ -780,13 +776,13 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Used in automated test report generation
+	 *  @note DUT metadata only; not read back by any calibration or measurement calculation
 	 */
 	CMD_DUT_MANUFACTURER =					CMD_DUT_OFFSET + 0x04,
 	
 	/** @amutitle{DUT — Model}
 	 *  @amudesc{Sets or queries DUT model/part number.}
-	 *  @param model Model/part number string (max 32 characters)
+	 *  @param model Model/part number string (max 15 characters)
 	 *  @return Current model designation
 	 *
 	 *  @amupanels
@@ -802,13 +798,13 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Essential for test data traceability and analysis
+	 *  @note DUT metadata only; not read back by any calibration or measurement calculation
 	 */
 	CMD_DUT_MODEL =							CMD_DUT_OFFSET + 0x05,
 	
 	/** @amutitle{DUT — Technology}
 	 *  @amudesc{Sets or queries DUT semiconductor technology.}
-	 *  @param technology Technology string (e.g., "Silicon", "GaAs", "InGaP/GaAs/Ge", max 32 chars)
+	 *  @param technology Technology string (e.g., "Silicon", "GaAs", "InGaP/GaAs/Ge", max 15 chars)
 	 *  @return Current technology description
 	 *
 	 *  @amupanels
@@ -830,7 +826,7 @@ typedef enum {
 	
 	/** @amutitle{DUT — Serial Number}
 	 *  @amudesc{Sets or queries DUT serial number.}
-	 *  @param serial Serial number string (max 32 characters)
+	 *  @param serial Serial number string (max 23 characters)
 	 *  @return Current DUT serial number
 	 *
 	 *  @amupanels
@@ -847,14 +843,14 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Critical for individual device performance tracking
+	 *  @note DUT metadata only; not read back by any calibration or measurement calculation
 	 */
 	CMD_DUT_SERIAL_NUMBER =					CMD_DUT_OFFSET + 0x07,
 	
 	/** @amutitle{DUT — Energy}
 	 *  @amudesc{Sets or queries DUT radiation energy exposure.}
-	 *  @param energy Total energy exposure in MeV (floating-point, 0.0 to 1e12)
-	 *  @return Current cumulative energy exposure
+	 *  @param energy Caller-defined float; the firmware stores it verbatim
+	 *  @return Current stored energy value
 	 *
 	 *  @amupanels
 	 *  @amuscpi{DUT:ENERGY[?]}
@@ -870,14 +866,14 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Essential for radiation effects analysis and modeling
+	 *  @note DUT metadata only; not read back by any calibration or measurement calculation
 	 */
 	CMD_DUT_ENERGY =						CMD_DUT_OFFSET + 0x08,
 	
 	/** @amutitle{DUT — Dose}
 	 *  @amudesc{Sets or queries DUT ionizing radiation dose.}
-	 *  @param dose Total dose in krad(Si) (floating-point, 0.0 to 10000.0)
-	 *  @return Current cumulative dose exposure
+	 *  @param dose Caller-defined float; the firmware stores it verbatim
+	 *  @return Current stored dose value
 	 *
 	 *  @amupanels
 	 *  @amuscpi{DUT:DOSE[?]}
@@ -893,13 +889,13 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Used for TID degradation analysis and lifetime predictions
+	 *  @note DUT metadata only; not read back by any calibration or measurement calculation
 	 */
 	CMD_DUT_DOSE =							CMD_DUT_OFFSET + 0x09,
 	
 	/** @amutitle{DUT — Notes}
 	 *  @amudesc{Sets or queries DUT documentation notes.}
-	 *  @param notes Text notes string (max 256 characters)
+	 *  @param notes Text notes string (max 127 characters)
 	 *  @return Current notes content
 	 *
 	 *  @amupanels
@@ -917,7 +913,7 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Supports basic markdown formatting for rich documentation
+	 *  @note Free-form text; stored verbatim
 	 */
 	CMD_DUT_NOTES =							CMD_DUT_OFFSET + 0x0B,
 	
@@ -940,7 +936,7 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
-	 *  @note Sensor type determines calibration coefficients and measurement range
+	 *  @note Selects the resistance-to-temperature conversion the firmware applies
 	 */
 	CMD_DUT_TSENSOR_TYPE =					CMD_DUT_OFFSET + 0x0D,
 	
@@ -1056,7 +1052,7 @@ typedef enum {
 	 *  @amuscpi{MEASure:ADC:TSENSORS[:RAW]?}
 	 *  @amupanelex
 	 *  MEASure:ADC:TSENSORS?
-	 *  25.3,26.1,24.8,25.5
+	 *  25.3,26.1,24.8
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @amui2c{CMD_EXEC_MEAS_TSENSORS}
@@ -1067,14 +1063,15 @@ typedef enum {
 	CMD_EXEC_MEAS_TSENSORS =				CMD_EXEC_OFFSET + 0x02,
 	
 	/** @amutitle{Measure — Internal Voltages}
+	 *  @amuhw{Not implemented on AMU3}
 	 *  @amudesc{Measures internal supply voltages.}
-	 *  @return Internal supply voltage measurements
+	 *  @return AVDD, IOVDD, ALDO, and DLDO supply voltages, in volts
 	 *
 	 *  @amupanels
 	 *  @amuscpi{MEASure:INTERNALvoltages?}
 	 *  @amupanelex
 	 *  MEASure:INTERNALvoltages?
-	 *  3.30,5.02,12.01,-12.03
+	 *  3.30,3.30,1.80,1.80
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @amui2c{CMD_EXEC_MEAS_INTERNAL_VOLTAGES}
@@ -1088,13 +1085,13 @@ typedef enum {
 	
 	/** @amutitle{Measure — Sun Sensor}
 	 *  @amudesc{Calculates sun sensor angles}
-	 *  @return Sun sensor yaw and pitch angle measurements
+	 *  @return Four quadrant diode readings (TL, BL, BR, TR) followed by yaw and pitch angles
 	 *
 	 *  @amupanels
 	 *  @amuscpi{MEASure:SUNSensor?}
 	 *  @amupanelex
 	 *  MEASure:SUNSensor?
-	 *  15.2,-8.7,0.856
+	 *  0.251,0.249,0.252,0.250,15.2,-8.7
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @amui2c{CMD_EXEC_MEAS_SUN_SENSOR}
@@ -1103,6 +1100,7 @@ typedef enum {
 	 *  @endamupanelex
 	 *  @endamupanel
 	 *  @endamupanels
+	 *  @note Diode sum below the aperture threshold -> yaw and pitch read NaN.
 	 */
 	CMD_EXEC_MEAS_SUN_SENSOR =				CMD_EXEC_OFFSET + 0x04,
 	
